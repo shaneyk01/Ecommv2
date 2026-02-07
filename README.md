@@ -114,6 +114,49 @@ src/
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
+- `npm test` - Run Jest unit and integration tests
+
+## Testing
+
+The project uses **Jest** and **React Testing Library** for comprehensive testing:
+
+### Test Files
+- `src/__tests__/RegisterPage.unit.test.js` - Unit tests for registration page
+- `src/__tests__/CartCheckout.unit.test.js` - Unit tests for cart checkout state
+- `src/__tests__/CartFlow.integration.test.js` - Integration tests for cart flow
+
+### Running Tests
+```bash
+npm test                    # Run all tests
+npm test -- --coverage     # Run tests with coverage report
+```
+
+## CI/CD Pipeline
+
+### GitHub Actions
+The project includes automated CI/CD workflows triggered on every push to `main`:
+
+**Build Job** (`.github/workflows/main.yml`)
+- Checks out code
+- Sets up Node.js 18
+- Installs dependencies
+- Validates the build
+
+**Test Job** (`.github/workflows/main.yml`)
+- Runs Jest unit and integration tests
+- Fails the workflow if tests fail (prevents faulty code from being merged)
+
+**View CI Status**: [GitHub Actions](<https://github.com/shaneyk01/Ecommv2/actions>)
+
+### Vercel Deployment
+The project is automatically deployed to Vercel on successful CI passing:
+
+**Deployment Job** (`.github/workflows/deploy.yml`)
+- Triggered after successful tests
+- Deploys to Vercel production
+- Project ID: `prj_83VTGePsQjE89226xUe0nR8E8Uti`
+
+**Live Application**: [Vercel Deployment](<https://ecommv2-gray-three.vercel.app>)
 
 ## Key Features
 
