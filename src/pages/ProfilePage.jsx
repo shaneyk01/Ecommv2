@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { getUser, updateUser } from '../services/userService';
+import { deleteUserAccount } from '../services/authService';
+import { useNavigate } from "react-router-dom";
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -71,6 +74,22 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await deleteUserAccount(user);
+      navigate('/login');
+    } catch (err) {
+      console.error(err);
+      setError('Failed to delete account. You may need to re-login explicitly before deleting.');
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '40px' }}>Loading profile...</div>;
   }
@@ -131,20 +150,37 @@ export default function ProfilePage() {
             <p style={{ margin: 0, fontSize: '16px' }}>{profile?.address || 'Not set'}</p>
           </div>
 
-          <button
-            onClick={() => setEditing(true)}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '16px'
-            }}
-          >
-            Edit Profile
-          </button>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', marginTop: '30px' }}>
+            <button
+              onClick={() => setEditing(true)}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '16px'
+              }}
+            >
+              Edit Profile
+            </button>
+            
+            <button
+              onClick={handleDeleteAccount}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '16px'
+              }}
+            >
+              Delete Account
+            </button>
+          </div>
         </div>
       ) : (
         <form onSubmit={handleSubmit} style={{
@@ -153,8 +189,8 @@ export default function ProfilePage() {
           borderRadius: '8px',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
         }}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>
               Name
             </label>
             <input
@@ -162,39 +198,18 @@ export default function ProfilePage() {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              required
               style={{
                 width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
+                padding: '8px',
                 borderRadius: '4px',
+                border: '1px solid #ced4da',
                 fontSize: '16px'
               }}
             />
           </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
-              Email (read-only)
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              disabled
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '16px',
-                backgroundColor: '#f8f9fa',
-                color: '#6c757d'
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>
               Address
             </label>
             <textarea
@@ -204,16 +219,15 @@ export default function ProfilePage() {
               rows="3"
               style={{
                 width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
+                padding: '8px',
                 borderRadius: '4px',
-                fontSize: '16px',
-                resize: 'vertical'
+                border: '1px solid #ced4da',
+                fontSize: '16px'
               }}
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '10px' }}>
             <button
               type="submit"
               disabled={saving}
@@ -223,20 +237,20 @@ export default function ProfilePage() {
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '16px'
+                cursor: saving ? 'not-allowed' : 'pointer',
+                fontSize: '16px',
+                opacity: saving ? 0.7 : 1
               }}
             >
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
-            
             <button
               type="button"
               onClick={() => {
                 setEditing(false);
                 setError('');
-                setSuccess('');
               }}
+              disabled={saving}
               style={{
                 padding: '10px 20px',
                 backgroundColor: '#6c757d',

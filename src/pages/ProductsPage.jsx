@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { getProducts } from '../services/productService.js';
+import { getProducts, createProduct, updateProduct, deleteProduct } from '../services/productService.js';
 import { createOrder } from '../services/orderService.js';
 import ProductCard from '../components/ProductCard';
 import CartItem from '../components/CartItem';
@@ -18,6 +18,17 @@ export default function ProductsPage() {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+
+  // Product Management State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productForm, setProductForm] = useState({
+    title: '',
+    price: '',
+    description: '',
+    category: '',
+    image: ''
+  });
 
   useEffect(() => {
     loadProducts();
@@ -133,6 +144,74 @@ export default function ProductsPage() {
     }
   };
 
+  // Product Management Handlers
+  const handleAddNew = () => {
+    setEditingProduct(null); // null means new product
+    setProductForm({
+      title: '',
+      price: '',
+      description: '',
+      category: '',
+      image: ''
+    });
+    setIsEditing(true);
+  };
+
+  const handleEdit = (product) => {
+    setEditingProduct(product);
+    setProductForm({
+      title: product.title,
+      price: product.price,
+      description: product.description,
+      category: product.category,
+      image: product.image
+    });
+    setIsEditing(true);
+  };
+
+  const handleDelete = async (product) => {
+    if (!window.confirm(`Are you sure you want to delete "${product.title}"?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await deleteProduct(product.id);
+      await loadProducts(); // Refresh list
+    } catch (err) {
+      console.error(err);
+      setError('Failed to delete product');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProductSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const productData = {
+        ...productForm,
+        price: parseFloat(productForm.price)
+      };
+
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, productData);
+      } else {
+        await createProduct(productData);
+      }
+
+      setIsEditing(false);
+      await loadProducts();
+    } catch (err) {
+      console.error(err);
+      setError('Failed to save product');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
 
   if (loading) {
@@ -148,117 +227,33 @@ export default function ProductsPage() {
         marginBottom: '24px'
       }}>
         <h1>Products</h1>
-        
-        <button
-          onClick={() => setShowCart(!showCart)}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '16px',
-            position: 'relative'
-          }}
-        >
-          🛒 Cart
-          {cartItemCount > 0 && (
-            <span style={{
-              position: 'absolute',
-              top: '-8px',
-              right: '-8px',
-              backgroundColor: '#dc3545',
-              color: 'white',
-              borderRadius: '50%',
-              width: '24px',
-              height: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '12px',
-              fontWeight: 'bold'
-            }}>
-              {cartItemCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Search and Filter Bar */}
-      <div style={{
-        display: 'flex',
-        gap: '16px',
-        marginBottom: '24px',
-        backgroundColor: 'white',
-        padding: '16px',
-        borderRadius: '8px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            flex: 1,
-            padding: '10px 16px',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            fontSize: '16px'
-          }}
-        />
-        
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          style={{
-            padding: '10px 16px',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            fontSize: '16px',
-            minWidth: '200px',
-            cursor: 'pointer'
-          }}
-        >
-          <option value="">All Categories</option>
-          {categories.map(category => (
-            <option key={category} value={category}>{category}</option>
-          ))}
-        </select>
-
-        {(searchTerm || selectedCategory) && (
+        {user && (
           <button
-            onClick={() => {
-              setSearchTerm('');
-              setSelectedCategory('');
-            }}
+            onClick={handleAddNew}
             style={{
-              padding: '10px 16px',
-              backgroundColor: '#6c757d',
+              padding: '10px 20px',
+              backgroundColor: '#28a745',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '16px'
+              fontWeight: '500'
             }}
           >
-            Clear Filters
+            + Add Product
           </button>
         )}
       </div>
-
+      
       {orderSuccess && (
         <div style={{
-          padding: '16px',
+          padding: '12px',
           backgroundColor: '#d4edda',
           color: '#155724',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          textAlign: 'center',
-          fontWeight: '500'
+          borderRadius: '4px',
+          marginBottom: '16px'
         }}>
-          ✓ Order placed successfully! Check "My Orders" to view your order.
+          Order placed successfully!
         </div>
       )}
 
@@ -274,21 +269,76 @@ export default function ProductsPage() {
         </div>
       )}
 
+      <div style={{ 
+        display: 'flex', 
+        gap: '20px', 
+        flexWrap: 'wrap',
+        marginBottom: '24px',
+        alignItems: 'center'
+      }}>
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            padding: '10px',
+            borderRadius: '4px',
+            border: '1px solid #ced4da',
+            minWidth: '250px',
+            flex: 1
+          }}
+        />
+        
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          style={{
+            padding: '10px',
+            borderRadius: '4px',
+            border: '1px solid #ced4da',
+            minWidth: '150px'
+          }}
+        >
+          <option value="">All Categories</option>
+          {categories.map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
+
+        <button
+          onClick={() => setShowCart(!showCart)}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          🛒 Cart ({cartItemCount})
+        </button>
+      </div>
+
       {showCart && (
         <div style={{
-          backgroundColor: 'white',
-          padding: '24px',
+          marginBottom: '32px',
+          padding: '20px',
+          backgroundColor: '#f8f9fa',
           borderRadius: '8px',
-          boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-          marginBottom: '32px'
+          border: '1px solid #e9ecef'
         }}>
-          <h2 style={{ marginTop: 0 }}>Shopping Cart</h2>
-          
+          <h2 style={{ marginTop: 0 }}>Your Cart</h2>
           {cart.length === 0 ? (
-            <p style={{ color: '#666' }}>Your cart is empty</p>
+            <p>Your cart is empty.</p>
           ) : (
             <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {cart.map(item => (
                   <CartItem
                     key={item.id}
@@ -344,7 +394,7 @@ export default function ProductsPage() {
         }}>
           <p style={{ fontSize: '18px', color: '#666' }}>
             {products.length === 0 
-              ? 'No products available yet. Check back soon!'
+              ? 'No products available yet. Add your first product!'
               : 'No products match your search criteria.'}
           </p>
         </div>
@@ -368,10 +418,128 @@ export default function ProductsPage() {
                 key={product.id}
                 product={product}
                 onAddToCart={handleAddToCart}
+                onEdit={user ? handleEdit : null}
+                onDelete={user ? handleDelete : null}
               />
             ))}
           </div>
         </>
+      )}
+
+      {/* Product Form Modal */}
+      {isEditing && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '24px',
+            borderRadius: '8px',
+            width: '100%',
+            maxWidth: '500px',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <h2>{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
+            
+            <form onSubmit={handleProductSubmit}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Title</label>
+                <input
+                  type="text"
+                  required
+                  value={productForm.title}
+                  onChange={e => setProductForm({...productForm, title: e.target.value})}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  value={productForm.price}
+                  onChange={e => setProductForm({...productForm, price: e.target.value})}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Category</label>
+                <input
+                  type="text"
+                  required
+                  value={productForm.category}
+                  onChange={e => setProductForm({...productForm, category: e.target.value})}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Image URL</label>
+                <input
+                  type="url"
+                  placeholder="https://example.com/image.jpg"
+                  value={productForm.image}
+                  onChange={e => setProductForm({...productForm, image: e.target.value})}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Description</label>
+                <textarea
+                  required
+                  rows="4"
+                  value={productForm.description}
+                  onChange={e => setProductForm({...productForm, description: e.target.value})}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {editingProduct ? 'Save Changes' : 'Create Product'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
