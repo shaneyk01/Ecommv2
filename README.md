@@ -156,8 +156,7 @@ The project is automatically deployed to Vercel on successful CI passing:
 - Deploys to Vercel production
 - Project ID: `prj_83VTGePsQjE89226xUe0nR8E8Uti`
 
-**Live Application**: [Vercel Deployment](<https://ecommv2-gray-three.vercel.app>)
-
+**Live Application**: [Vercel Deployment](https://ecommv2-pm774tvbj-shayney-hoyohoys-projects.vercel.app/
 ## Key Features
 
 ### Shopping Experience
