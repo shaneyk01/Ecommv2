@@ -1,32 +1,49 @@
-name: CI
+name: Ecommercev2 CI
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  build-and-test:
+    builds:
+        runs-on: ubuntu-latest
+        
+        steps:
+     
+    Step 1:   
+        - name: chckout code
+        uses: actions/checkout@v3
+    
+    Step2:
+        - name: Setup Node.js 
+        uses: actions/setup-node@v3
+        with: node-version: '18'
+       
+    Step 3:
+        - name: Install dependencies
+        run: npm install
+
+test:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [18.x]
-
+   
     steps:
-    - name: Checkout code
+   
+    Step 1:       
+    - name: chckout code
       uses: actions/checkout@v3
-
-    - name: Setup Node.js ${{ matrix.node-version }}
+    
+      Step 2:
+    - name: Setup Node.js 
       uses: actions/setup-node@v3
       with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-
+        node-version: '18'
+       
+    Step 3:
     - name: Install dependencies
       run: npm install
-
+    
+    Step 4:
     - name: Run tests
-      run: npm test -- --coverage
+      run: npm test -- -- watchAll=false
 
-    - name: Build project
-      run: npm run build || echo "No build script configured"
+   
